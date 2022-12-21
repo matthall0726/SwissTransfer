@@ -1,7 +1,8 @@
 import os
 import platform
 import webbrowser
-# from tkinter import *
+from tkinter import messagebox
+from tkinter import *
 import customtkinter
 from PIL import Image
 
@@ -62,8 +63,8 @@ class LandingPage(customtkinter.CTkFrame):
         label_password.grid(row=1, column=5, padx=5, pady=15, sticky="n")
 
         # need to change domain name to something else @Matthew
-        # textbox_password = customtkinter.CTkEntry(self, width=100, height=5)
-        # textbox_password.grid(row=1, column=6, sticky="n", padx=5, pady=20)
+        textbox_domain = customtkinter.CTkEntry(self, width=100, height=5)
+        textbox_domain.grid(row=1, column=6, sticky="n", padx=5, pady=20)
 
         def login_button():
             """ This function is responsible for logging into the SSH Server using username and password fields"""
@@ -71,6 +72,7 @@ class LandingPage(customtkinter.CTkFrame):
             system_info = platform.system().lower()
             uname = textbox_username.get()
             password = textbox_password.get()
+            domain = textbox_domain.get()
 
             if system_info.__contains__("linux"):  # Detects if the user is running the application from linux
                 terminal_command = "sshpass -p \"{0}\" ssh -o StrictHostKeyChecking=no {1}@swisstransfer.net"
@@ -79,17 +81,34 @@ class LandingPage(customtkinter.CTkFrame):
                 # TODO implement a way to check if the user has been authenticated then destroy the landing page will
                 #  be destroyed -> self.destroy()
 
-            elif system_info.__contains__("mac os"):  # TODO needs to correctly detect os x (mac)
+            elif system_info.__contains__("darwin"):  # TODO needs to correctly detect os x (mac)
                 terminal_command = """ osascript -e '
                         tell application "Terminal"
                         reopen
                         activate
-                        do script "ssh mhall087@swisstransfer.net" in front window
+                        do script "ssh {0}@{1}" in front window
                         delay 2
-                        do script "Mrh0726!." in front window
+                        do script "{2}" in front window
                         end tell
                         '"""
-                os.system(terminal_command)
+                if domain == "":
+                    domain = "swisstransfer.net"
+
+                if uname != "" and password != "":
+                    terminal_command = terminal_command.format(uname, domain, password)
+                    os.system(terminal_command)
+                else:
+                    messagebox.showerror("Error", "Please enter a username and password, and then try again.")
+
+
+            elif system_info.__contains__("win"): # FIXME create windows script for openssh and login
+                print("windows feature is not enabled")
+                open_ssh_install = "Get-WindowsCapability -Online -Name OpenSSH.Client* | Add-WindowsCapability -Online"
+                os.system(open_ssh_install)
+
+            else:
+                messagebox.showerror("Error","The current version of your operating system could not be detected.")
+
 
         login_button = customtkinter.CTkButton(
             master=self,
@@ -113,9 +132,9 @@ class LandingPage(customtkinter.CTkFrame):
         # For Michael
         my_image = customtkinter.CTkImage(
             light_image=Image.open(
-                "/home/paradox/PycharmProjects/SwissTransfer/Swiss Transfer/CTk Frame/Transfer Photo-850x330.jpeg"),
+                "/Users/matthall/Desktop/Personal Projects/GitHub Repo - Swiss Transfer/SwissTransfer/Swiss Transfer/CTk Frame/Transfer Photo-850x330.jpeg"),
             dark_image=Image.open(
-                "/home/paradox/PycharmProjects/SwissTransfer/Swiss Transfer/CTk Frame/Transfer Photo-850x330.jpeg"
+                "/Users/matthall/Desktop/Personal Projects/GitHub Repo - Swiss Transfer/SwissTransfer/Swiss Transfer/CTk Frame/Transfer Photo-850x330.jpeg"
             ),
             size=(800, 330))
 
