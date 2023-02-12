@@ -1,9 +1,7 @@
-import os
-import platform
+import socket
 import webbrowser
-from tkinter import messagebox
-from tkinter import *
 import customtkinter
+import paramiko
 from PIL import Image
 
 
@@ -14,12 +12,13 @@ class App(customtkinter.CTk):
         customtkinter.CTk.__init__(self)
         self.title("Swiss Transfer")
         self.geometry("950x750")
-        self.minsize(400, 300)
-        self.resizable(False, False)
+        self.minsize(400, 400)
+
         container = customtkinter.CTkFrame(self)
-        container.pack(side="top", fill="both", expand=True)
+        container.pack()
+
         # create a grid layout
-        self.grid_rowconfigure(5, weight=1)
+        self.grid_rowconfigure(5, weight=0)
         self.grid_columnconfigure(7, weight=0)
         self.frames = {}
 
@@ -38,15 +37,12 @@ class App(customtkinter.CTk):
 class LandingPage(customtkinter.CTkFrame):
     """Login Page for the Swiss Transfer Application"""
 
-    def __init__(self, parent, controller): # TODO implement controller for switching to the home page
+    def __init__(self, parent, controller):  # TODO implement controller for switching to the home page
         customtkinter.CTkFrame.__init__(self, parent)
         customtkinter.set_appearance_mode("system")
 
         product_name_label = customtkinter.CTkLabel(master=self, text="Swiss Transfer ®")
         product_name_label.grid(row=0, column=7, pady=10)
-
-        space_label = customtkinter.CTkLabel(master=self, text="")
-        space_label.grid(row=1, column=0, padx=25)
 
         label_username = customtkinter.CTkLabel(master=self, text="Username")
         label_username.grid(row=1, column=1, padx=0, pady=15, sticky="n")
@@ -54,61 +50,41 @@ class LandingPage(customtkinter.CTkFrame):
         textbox_username = customtkinter.CTkEntry(self, width=100, height=5)
         textbox_username.grid(row=1, column=2, sticky="n", padx=5, pady=20)
 
-        label_password = customtkinter.CTkLabel(master=self, text="Password", )
+        label_password = customtkinter.CTkLabel(master=self, text="Password")
         label_password.grid(row=1, column=3, padx=5, pady=15, sticky="n")
         textbox_password = customtkinter.CTkEntry(self, width=100, height=5, show="*")
         textbox_password.grid(row=1, column=4, sticky="n", padx=5, pady=20)
 
-        label_password = customtkinter.CTkLabel(master=self, text="Domain")
+        label_password = customtkinter.CTkLabel(master=self, text="Domain: 22")
         label_password.grid(row=1, column=5, padx=5, pady=15, sticky="n")
-
-        # need to change domain name to something else @Matthew
-        textbox_domain = customtkinter.CTkEntry(self, width=100, height=5)
-        textbox_domain.grid(row=1, column=6, sticky="n", padx=5, pady=20)
 
         def login_button():
             """ This function is responsible for logging into the SSH Server using username and password fields"""
-
-            system_info = platform.system().lower()
             uname = textbox_username.get()
             password = textbox_password.get()
-            domain = textbox_domain.get()
 
-            if system_info.__contains__("linux"):  # Detects if the user is running the application from linux
-                terminal_command = "sshpass -p \"{0}\" ssh -o StrictHostKeyChecking=no {1}@swisstransfer.net"
-                terminal_command = terminal_command.format(password, uname)
-                os.system(terminal_command)
-                # TODO implement a way to check if the user has been authenticated then destroy the landing page will
-                #  be destroyed -> self.destroy()
+            try:
+                client.connect(hostname="swisstransfer.net",
+                               port=22,
+                               username=uname,
+                               password=password,
+                               auth_timeout=5
+                               )
+                client.open_sftp()  # opens channel for transferring files
+                self.destroy()  # destroys login page
+            except paramiko.BadHostKeyException:
 
-            elif system_info.__contains__("darwin"):  # TODO needs to correctly detect os x (mac)
-                terminal_command = """ osascript -e '
-                        tell application "Terminal"
-                        reopen
-                        activate
-                        do script "ssh {0}@{1}" in front window
-                        delay 2
-                        do script "{2}" in front window
-                        end tell
-                        '"""
-                if domain == "":
-                    domain = "swisstransfer.net"
-
-                if uname != "" and password != "":
-                    terminal_command = terminal_command.format(uname, domain, password)
-                    os.system(terminal_command)
-                else:
-                    messagebox.showerror("Error", "Please enter a username and password, and then try again.")
-
-
-            elif system_info.__contains__("win"): # FIXME create windows script for openssh and login
-                print("windows feature is not enabled")
-                open_ssh_install = "Get-WindowsCapability -Online -Name OpenSSH.Client* | Add-WindowsCapability -Online"
-                os.system(open_ssh_install)
-
-            else:
-                messagebox.showerror("Error","The current version of your operating system could not be detected.")
-
+                print()  # TODO change login error text
+            except paramiko.AuthenticationException:
+                login_error = customtkinter \
+                    .CTkLabel(master=self,
+                              text="Could not connect. Try again.",
+                              text_color="red")
+                login_error.grid(row=0, column=3, columnspan=2, pady=10)
+            except paramiko.SSHException:
+                print()  # TODO change login error text
+            except socket.error:
+                print()  # TODO change login error text
 
         login_button = customtkinter.CTkButton(
             master=self,
@@ -125,21 +101,21 @@ class LandingPage(customtkinter.CTkFrame):
         # it gets filled to the size of the
         # image
 
-        # my_image = customtkinter.CTkImage(light_image=Image.open("CTk Frame/Transfer Photo-850x330.jpeg"),
-        #                                   dark_image=Image.open("CTk Frame/Transfer Photo-850x330.jpeg"),
-        #                                   size=(800, 330))
+        my_image = customtkinter.CTkImage(light_image=Image.open("CTk Frame/Transfer Photo-850x330.jpeg"),
+                                          dark_image=Image.open("CTk Frame/Transfer Photo-850x330.jpeg"),
+                                          size=(800, 330))
 
         # For Michael
-        my_image = customtkinter.CTkImage(
-            light_image=Image.open(
-                "/Users/matthall/Desktop/Personal Projects/GitHub Repo - Swiss Transfer/SwissTransfer/Swiss Transfer/CTk Frame/Transfer Photo-850x330.jpeg"),
-            dark_image=Image.open(
-                "/Users/matthall/Desktop/Personal Projects/GitHub Repo - Swiss Transfer/SwissTransfer/Swiss Transfer/CTk Frame/Transfer Photo-850x330.jpeg"
-            ),
-            size=(800, 330))
+        # my_image = customtkinter.CTkImage(
+        #     light_image=Image.open(
+        #         "/home/paradox/PycharmProjects/SwissTransfer/Swiss Transfer/CTk Frame/Transfer Photo-850x330.jpeg"),
+        #     dark_image=Image.open(
+        #         "/home/paradox/PycharmProjects/SwissTransfer/Swiss Transfer/CTk Frame/Transfer Photo-850x330.jpeg"
+        #     ),
+        #     size=(800, 330))
 
         login_image = customtkinter.CTkButton(master=self, image=my_image, text="", hover=False, fg_color="#404040")
-        login_image.grid(row=2, column=1, columnspan=7)
+        login_image.grid(row=3, column=0, columnspan=8, padx=25)
 
         # Help Label
         # Redirects user from client
@@ -153,9 +129,9 @@ class LandingPage(customtkinter.CTkFrame):
             print("button pressed")
 
         help_button_spacing = customtkinter.CTkLabel(master=self, text="")
-        help_button_spacing.grid(row=3, column=0, padx=25)
+        help_button_spacing.grid(row=4, column=0, padx=25)
         help_button = customtkinter.CTkButton(master=self, text="Help", command=lambda a_url=url: open_url(a_url))
-        help_button.grid(row=3, column=7, pady=15)
+        help_button.grid(row=4, column=7, pady=15)
 
 
 class HomePage(customtkinter.CTkFrame):
@@ -166,5 +142,7 @@ class HomePage(customtkinter.CTkFrame):
 
 
 if __name__ == "__main__":
+    client = paramiko.SSHClient()  # client connection
+    client.load_system_host_keys()
     app = App()
     app.mainloop()
